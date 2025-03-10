@@ -21,30 +21,46 @@ class SyncSparkyController extends Controller
             $productCategories = $request->post('product_category');
             $productAttributeSet = $request->post('product_attribute_set');
             $productAttribute = $request->post('product_attribute');
-            if ($productCategories && is_array($productCategories)) {
+            if (!empty($productCategories) && is_array($productCategories)) {
+                $ids = [];
+            
                 foreach ($productCategories as $category) {
-                    Category::updateOrCreate(
-                        ['id' => $category['id']], // Match by ID
+                    // Ensure ID exists or create a new one
+                    $categoryId = $category['id'] ?? null;
+            
+                    $categoryModel = Category::updateOrCreate(
+                        ['id' => $categoryId], // Match by ID
                         [
                             'name' => $category['name'],
-                            'slug' => $category['product_key'] ? $category['product_key'] : Str::slug($category['name']), // Generate slug from name
+                            'slug' => $category['product_key'] ? $category['product_key'] : Str::slug($category['name']),
                             'parent_id' => $category['parent_id'] ?? null,
-                            'depth_level' => $category['parent_id'] ? 2 : 1, // Assume depth logic
-                            'icon' => $category['preview_url'] ?? null, // Assuming media URL
-                            'searchable' => 1, // Default to searchable
-                            'status' => 1, // Active by default
+                            'depth_level' => $category['parent_id'] ? 2 : 1,
+                            'icon' => $category['preview_url'] ?? null,
+                            'searchable' => 1,
+                            'status' => 1,
                             'total_sale' => $category['total_items'] ?? 0,
-                            'avg_rating' => 0, // Set default rating
+                            'avg_rating' => 0,
                             'commission_rate' => 0
                         ]
                     );
+            
+                    $ids[] = $categoryModel->id; // Ensure the correct ID is stored
                 }
-            }
-
-            if ($productAttributeSet && is_array($productAttributeSet)) {
+            
+                // Prevent accidental deletion of all categories
+                if (!empty($ids)) {
+                    Category::whereNotIn('id', $ids)->delete();
+                }
+            }            
+            if (!empty($productAttributeSet) && is_array($productAttributeSet)) {
+                $attributeSetIds = [];
+            
                 foreach ($productAttributeSet as $attributeSet) {
-                    Attribute::updateOrCreate(
-                        ['id' => $attributeSet['id']],
+                    // Ensure ID exists or create a new one
+                    $attributeSetId = $attributeSet['id'] ?? null;
+            
+                    $attribute = Attribute::updateOrCreate(
+                        ['id' => $attributeSetId], // Match by ID
                         [
                             'name' => $attributeSet['title'],
                             'display_type' => $attributeSet['display_layout'],
@@ -54,20 +70,39 @@ class SyncSparkyController extends Controller
                             'updated_by' => 1
                         ]
                     );
+            
+                    $attributeSetIds[] = $attribute->id; // Ensure correct ID is stored
+                }
+            
+                // Prevent accidental mass deletion
+                if (!empty($attributeSetIds)) {
+                    Attribute::whereNotIn('id', $attributeSetIds)->delete();
                 }
             }
-
-            if ($productAttribute && is_array($productAttribute)) {
+            
+            if (!empty($productAttribute) && is_array($productAttribute)) {
+                $attributeValueIds = [];
+            
                 foreach ($productAttribute as $attribute) {
-                    AttributeValue::updateOrCreate(
-                        ['id' => $attribute['id']],
+                    // Ensure ID exists or create a new one
+                    $attributeId = $attribute['id'] ?? null;
+            
+                    $attributeValue = AttributeValue::updateOrCreate(
+                        ['id' => $attributeId],
                         [
                             'value' => $attribute['title'],
                             'attribute_id' => $attribute['attribute_set_id']
                         ]
                     );
+            
+                    $attributeValueIds[] = $attributeValue->id; // Ensure correct ID is stored
                 }
-            }
+            
+                // Prevent accidental mass deletion
+                if (!empty($attributeValueIds)) {
+                    AttributeValue::whereNotIn('id', $attributeValueIds)->delete();
+                }
+            }            
         } catch (\Throwable $th) {
             return [
                 'success' => false, 
@@ -76,8 +111,7 @@ class SyncSparkyController extends Controller
         }
 
         return [
-            'success' => true, 
-            'data' => $request->all()
+            'success' => true
         ];
     }
 }
