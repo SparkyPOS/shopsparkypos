@@ -8,6 +8,7 @@ use Modules\Product\Entities\Category;
 use Illuminate\Support\Str;
 use Modules\Product\Entities\Attribute;
 use Modules\Product\Entities\AttributeValue;
+use Modules\Product\Entities\Color;
 
 class SyncSparkyController extends Controller
 {
@@ -82,7 +83,7 @@ class SyncSparkyController extends Controller
             
             if (!empty($productAttribute) && is_array($productAttribute)) {
                 $attributeValueIds = [];
-            
+                $colors = [];
                 foreach ($productAttribute as $attribute) {
                     // Ensure ID exists or create a new one
                     $attributeId = $attribute['id'] ?? null;
@@ -90,17 +91,34 @@ class SyncSparkyController extends Controller
                     $attributeValue = AttributeValue::updateOrCreate(
                         ['id' => $attributeId],
                         [
-                            'value' => $attribute['title'],
+                            'value' => $attribute['attribute_set_id'] == 1 ? $attribute['color'] : $attribute['title'],
                             'attribute_id' => $attribute['attribute_set_id']
                         ]
                     );
-            
-                    $attributeValueIds[] = $attributeValue->id; // Ensure correct ID is stored
+                    
+                    $attributeValueIds[] = $attributeValue->id; // Store the updated/created ID
+
+                    if ($attribute['attribute_set_id'] == 1) {
+                        $colors[] = [
+                            'name' => $attribute['title'], // Use array key, not object property
+                            'attribute_value_id' => $attributeValue->id
+                        ];
+                    }
                 }
             
+                // Insert or update Color records
+                if (!empty($colors)) {
+                    foreach ($colors as $color) {
+                        Color::updateOrCreate(
+                            ['attribute_value_id' => $color['attribute_value_id']],
+                            ['name' => $color['name']]
+                        );
+                    }
+                }
                 // Prevent accidental mass deletion
                 if (!empty($attributeValueIds)) {
                     AttributeValue::whereNotIn('id', $attributeValueIds)->delete();
+                    Color::whereNotIn('attribute_value_id', $attributeValueIds)->delete();
                 }
             }            
         } catch (\Throwable $th) {
