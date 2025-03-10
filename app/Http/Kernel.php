@@ -71,5 +71,6 @@ class Kernel extends HttpKernel
         'maintenance_mode' => \App\Http\Middleware\MaintenanceModeMiddleware::class,
         'prohibited_demo_mode' => \App\Http\Middleware\ProhibitedInDemoMode::class,
         'guestCheckout' => \App\Http\Middleware\GuestCheckout::class,
+        'webhook.auth' => \App\Http\Middleware\VerifyWebhookAuth::class,
     ];
 }
