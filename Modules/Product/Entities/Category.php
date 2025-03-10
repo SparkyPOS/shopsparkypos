@@ -20,7 +20,7 @@ class Category extends Model
 {
     use HasFactory , HasTranslations;
     use \Staudenmeir\EloquentHasManyDeep\HasRelationships;
-    // protected $guarded = ['id'];
+    protected $guarded = [];
     public $translatable = ['name'];
     protected $appends = ['AllProducts'];
     protected $casts = [
