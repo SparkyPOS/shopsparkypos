@@ -9,6 +9,10 @@ use Illuminate\Support\Str;
 use Modules\Product\Entities\Attribute;
 use Modules\Product\Entities\AttributeValue;
 use Modules\Product\Entities\Color;
+use Modules\Product\Entities\Product;
+use Modules\Product\Entities\ProductGalaryImage;
+use Modules\Product\Entities\ProductSku;
+use Modules\Product\Entities\ProductVariations;
 
 class SyncSparkyController extends Controller
 {
@@ -22,6 +26,8 @@ class SyncSparkyController extends Controller
             $productCategories = $request->post('product_category');
             $productAttributeSet = $request->post('product_attribute_set');
             $productAttribute = $request->post('product_attribute');
+            $product = $request->post('product');
+
             if (!empty($productCategories) && is_array($productCategories)) {
                 $ids = [];
             
@@ -52,7 +58,8 @@ class SyncSparkyController extends Controller
                 if (!empty($ids)) {
                     Category::whereNotIn('id', $ids)->delete();
                 }
-            }            
+            }
+
             if (!empty($productAttributeSet) && is_array($productAttributeSet)) {
                 $attributeSetIds = [];
             
@@ -120,7 +127,78 @@ class SyncSparkyController extends Controller
                     AttributeValue::whereNotIn('id', $attributeValueIds)->delete();
                     Color::whereNotIn('attribute_value_id', $attributeValueIds)->delete();
                 }
-            }            
+            }
+
+            if (!empty($productAttributeSet) && !empty($productAttribute)) {
+                // Get the valid attribute IDs and attribute value IDs
+                $validAttributeIds = Attribute::pluck('id')->toArray();
+                $validAttributeValueIds = AttributeValue::pluck('id')->toArray();
+
+                // Fetch the product_variation IDs and associated product_sku_id values before deletion
+                $variationsToDelete = ProductVariations::whereNotIn('attribute_id', $validAttributeIds)
+                    ->orWhereNotIn('attribute_value_id', $validAttributeValueIds)
+                    ->get(['id', 'product_sku_id']); // Fetch both id and product_sku_id
+
+                // Extract the product_sku_ids that need to be deleted
+                $productSkuIdsToDelete = $variationsToDelete->pluck('product_sku_id')->unique()->toArray();
+
+                // Extract the product_variation IDs
+                $variationIdsToDelete = $variationsToDelete->pluck('id')->toArray();
+
+                // Delete the invalid product variations
+                ProductVariations::whereIn('id', $variationIdsToDelete)->delete();
+
+                // Delete the corresponding product_sku records
+                ProductSku::whereIn('id', $productSkuIdsToDelete)->delete();
+
+                // Optional: Log or return the deleted variation IDs
+                return $variationsToDelete;
+            }
+
+            if (!empty($product) && $product['id']) {
+                $variations = $product['variations'];
+                $productAttributeSets = $product['attribute_sets'];
+                $galleries = $product["galleries"];
+                $variant_product = false;
+                if (!empty($variations)) {
+                    $variant_product = true;
+                }
+
+                if (!$variant_product) {
+                    $newProduct = Product::updateOrCreate(
+                        ['id' => $product['id']],
+                        [
+                            'product_name' => $product['name'],
+                            'product_type' => $variant_product ? 2 : 1,
+                            'variant_sku_prefix' => $product['variant_sku_prefix'],
+                            'barcode_type' => $product['barcode_type'],
+                            'description' => $product['shortdescription'],
+                            'unit_type_id' => 1,
+                            'discount_type' => 1,
+                            'video_provier' => 'youtube'
+                        ]
+                    );
+                    $newProductSku = ProductSku::where('product_id', $newProduct->id)->first();
+                    if (!$newProductSku instanceof ProductSku) {
+                        $newProductSku = new ProductSku();
+                    }
+                    $newProductSku->product_id = $newProduct->id;
+                    $newProductSku->sku = $product['sku'];
+                    $newProductSku->track_sku = $product['sku'];
+                    $newProductSku->purchase_price = $product['purchase_price'];
+                    $newProductSku->selling_price = $product['selling_price'];
+                    $newProductSku->save();
+
+                    ProductGalaryImage::where('product_id', $newProduct->id)->delete();
+                    foreach ($galleries as $gallery) {
+                        $gal = new ProductGalaryImage();
+                        $gal->product_id = $newProduct->id;
+                        $gal->images_source = $gallery['url'];
+                        $gal->save();
+                    }
+                }
+            }
+
         } catch (\Throwable $th) {
             return [
                 'success' => false, 
