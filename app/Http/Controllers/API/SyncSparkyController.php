@@ -186,9 +186,9 @@ class SyncSparkyController extends Controller
 
                     // Update Product Category
                     CategoryProduct::updateOrCreate(
-                        ['product_id' => $product['id']],
+                        ['product_id' => $newProduct->id],
                         [
-                            'category_id' => $newProduct->id
+                            'category_id' => $product['category_id']
                         ]
                     );
 
