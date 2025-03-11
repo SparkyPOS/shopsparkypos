@@ -19,7 +19,7 @@ class Product extends Model
 {
     use HasTranslations;
     protected $table = "products";
-    protected $guarded = [];
+    protected $guarded = ['idd'];
 
     public $translatable = ['product_name', 'subtitle_1', 'subtitle_2', 'description', 'specification', 'meta_title', 'meta_description'];
     protected $appends = ['translateProductName', 'TranslateProductSubtitle1', 'TranslateProductSubtitle2'];

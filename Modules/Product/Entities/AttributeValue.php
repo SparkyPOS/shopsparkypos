@@ -8,7 +8,7 @@ class AttributeValue extends Model
 {
     use HasFactory;
     protected $table = "attribute_values";
-    protected $guarded = [];
+    protected $guarded = ['idd'];
 
     public function attribute()
     {

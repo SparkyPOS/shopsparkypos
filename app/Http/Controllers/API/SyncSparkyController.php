@@ -177,9 +177,10 @@ class SyncSparkyController extends Controller
                             'description' => $product['shortdescription'],
                             'unit_type_id' => 7,
                             'discount_type' => 1,
+                            'minimum_order_qty' => 1,
                             'is_physical' => 1,
                             'is_approved' => 1,
-                            'status' => 1,
+                            'status' => $product['status'],
                             'video_provider' => 'youtube'
                         ]
                     );
@@ -202,6 +203,11 @@ class SyncSparkyController extends Controller
                     $newProductSku->track_sku = $product['sku'];
                     $newProductSku->purchase_price = $product['purchase_price'];
                     $newProductSku->selling_price = $product['selling_price'];
+                    $newProductSku->weight = 0;
+                    $newProductSku->length = 0;
+                    $newProductSku->breadth = 0;
+                    $newProductSku->height = 0;
+                    $newProductSku->status = $product['status'];
                     $newProductSku->save();
 
                     // Update Product Images

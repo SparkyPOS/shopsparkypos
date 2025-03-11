@@ -10,7 +10,7 @@ class Attribute extends Model
 {
     use HasFactory , HasTranslations;
     protected $table = "attributes";
-    protected $guarded = [];
+    protected $guarded = ['idd'];
     public $translatable = ['name','description'];
 
     protected $casts = [
