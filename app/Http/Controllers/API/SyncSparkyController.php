@@ -8,6 +8,7 @@ use Modules\Product\Entities\Category;
 use Illuminate\Support\Str;
 use Modules\Product\Entities\Attribute;
 use Modules\Product\Entities\AttributeValue;
+use Modules\Product\Entities\CategoryProduct;
 use Modules\Product\Entities\Color;
 use Modules\Product\Entities\Product;
 use Modules\Product\Entities\ProductGalaryImage;
@@ -160,11 +161,12 @@ class SyncSparkyController extends Controller
                 $productAttributeSets = $product['attribute_sets'];
                 $galleries = $product["galleries"];
                 $variant_product = false;
-                if (!empty($variations)) {
-                    $variant_product = true;
-                }
+                // if (!empty($variations)) {
+                //     $variant_product = true;
+                // }
 
                 if (!$variant_product) {
+                    // Update Product
                     $newProduct = Product::updateOrCreate(
                         ['id' => $product['id']],
                         [
@@ -173,11 +175,24 @@ class SyncSparkyController extends Controller
                             'variant_sku_prefix' => $product['variant_sku_prefix'],
                             'barcode_type' => $product['barcode_type'],
                             'description' => $product['shortdescription'],
-                            'unit_type_id' => 1,
+                            'unit_type_id' => 7,
                             'discount_type' => 1,
-                            'video_provier' => 'youtube'
+                            'is_physical' => 1,
+                            'is_approved' => 1,
+                            'status' => 1,
+                            'video_provider' => 'youtube'
                         ]
                     );
+
+                    // Update Product Category
+                    CategoryProduct::updateOrCreate(
+                        ['product_id' => $product['id']],
+                        [
+                            'category_id' => $newProduct->id
+                        ]
+                    );
+
+                    // Update Product Sku
                     $newProductSku = ProductSku::where('product_id', $newProduct->id)->first();
                     if (!$newProductSku instanceof ProductSku) {
                         $newProductSku = new ProductSku();
@@ -189,6 +204,7 @@ class SyncSparkyController extends Controller
                     $newProductSku->selling_price = $product['selling_price'];
                     $newProductSku->save();
 
+                    // Update Product Images
                     ProductGalaryImage::where('product_id', $newProduct->id)->delete();
                     foreach ($galleries as $gallery) {
                         $gal = new ProductGalaryImage();
