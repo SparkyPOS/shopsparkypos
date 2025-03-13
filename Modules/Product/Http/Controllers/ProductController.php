@@ -482,6 +482,7 @@ class ProductController extends Controller
     public function sku_combination_edit(Request $request)
     {
         $product = $this->productService->findById($request->id);
+        $init_load = $request->init_load;
 
         if($request->variant_sku_prefix) {
             $variant_sku_prefix = $request->variant_sku_prefix;
@@ -505,7 +506,7 @@ class ProductController extends Controller
 
         $attribute = $request->choice_no;
         $combinations = combinations($options);
-        return view('product::products.sku_combinations_edit', compact('combinations', 'variant_sku_prefix', 'product', 'attribute'));
+        return view('product::products.sku_combinations_edit', compact('combinations', 'variant_sku_prefix', 'product', 'attribute', 'init_load'));
 
 
     }

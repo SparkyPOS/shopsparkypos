@@ -40,7 +40,7 @@
             });
 
             $(document).on('change',"#choice_options",function(){
-                get_combinations();
+                get_combinations('update');
             });
 
             $(document).on('change', '#stock_manage', function(){
@@ -93,7 +93,7 @@
                 getFileName($(this).val(),name_id);
             });
             getActiveFieldShipping();
-            get_combinations();
+            get_combinations('load');
             $(document).on('change','#galary_image', function(event){
                 galleryImage($(this)[0],'#galler_img_prev');
             });
@@ -855,7 +855,11 @@
             $.ajax({
                 type: "POST",
                 url: '{{ route('product.sku_combination_edit') }}',
-                data: $('#choice_form').serialize(),
+                data: (function() {
+                    let formData = $('#choice_form').serializeArray();
+                    formData.push({ name: "init_load", value: el });
+                    return formData;
+                })(),
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="_token"]').attr('content')
                 },

@@ -161,38 +161,47 @@ class SyncSparkyController extends Controller
                 $productAttributeSets = $product['attribute_sets'];
                 $galleries = $product["galleries"];
                 $variant_product = false;
-                // if (!empty($variations)) {
-                //     $variant_product = true;
-                // }
+                if (!empty($variations)) {
+                    $variant_product = true;
+                }
+
+                // Update Product
+                $newProduct = Product::updateOrCreate(
+                    ['id' => $product['id']],
+                    [
+                        'product_name' => $product['name'],
+                        'product_type' => $variant_product ? 2 : 1,
+                        'variant_sku_prefix' => $product['variant_sku_prefix'] ?? $product['sku'],
+                        'barcode_type' => $product['barcode_type'],
+                        'description' => $product['shortdescription'],
+                        'unit_type_id' => 7,
+                        'discount_type' => 1,
+                        'minimum_order_qty' => 1,
+                        'is_physical' => 1,
+                        'is_approved' => 1,
+                        'status' => $product['status'],
+                        'video_provider' => 'youtube'
+                    ]
+                );
+
+                // Update Product Category
+                CategoryProduct::updateOrCreate(
+                    ['product_id' => $newProduct->id],
+                    [
+                        'category_id' => $product['category_id']
+                    ]
+                );
+
+                // Update Product Images
+                ProductGalaryImage::where('product_id', $newProduct->id)->delete();
+                foreach ($galleries as $gallery) {
+                    $gal = new ProductGalaryImage();
+                    $gal->product_id = $newProduct->id;
+                    $gal->images_source = $gallery['url'];
+                    $gal->save();
+                }
 
                 if (!$variant_product) {
-                    // Update Product
-                    $newProduct = Product::updateOrCreate(
-                        ['id' => $product['id']],
-                        [
-                            'product_name' => $product['name'],
-                            'product_type' => $variant_product ? 2 : 1,
-                            'variant_sku_prefix' => $product['variant_sku_prefix'],
-                            'barcode_type' => $product['barcode_type'],
-                            'description' => $product['shortdescription'],
-                            'unit_type_id' => 7,
-                            'discount_type' => 1,
-                            'minimum_order_qty' => 1,
-                            'is_physical' => 1,
-                            'is_approved' => 1,
-                            'status' => $product['status'],
-                            'video_provider' => 'youtube'
-                        ]
-                    );
-
-                    // Update Product Category
-                    CategoryProduct::updateOrCreate(
-                        ['product_id' => $newProduct->id],
-                        [
-                            'category_id' => $product['category_id']
-                        ]
-                    );
-
                     // Update Product Sku
                     $newProductSku = ProductSku::where('product_id', $newProduct->id)->first();
                     if (!$newProductSku instanceof ProductSku) {
@@ -209,14 +218,66 @@ class SyncSparkyController extends Controller
                     $newProductSku->height = 0;
                     $newProductSku->status = $product['status'];
                     $newProductSku->save();
+                } else {
+                    $skuIds = [];
+                    $pVariationIds = [];
+                    // save product variation and product sku
+                    foreach ($variations as $ind => $variant) {
+                        $sku = '';
+                        $sku .= str_replace(' ', '-', $newProduct->variant_sku_prefix);
+                        foreach ($variant['items'] as $item) {
+                            $item_value = \Modules\Product\Entities\AttributeValue::find($item['attribute_id']);
+                            if ($item_value->attribute_id == 1) {
+                                $item = $item_value->color->name;
+                            }else {
+                                $item = $item_value->value;
+                            }
+                            $sku .= '-'.str_replace(' ', '', $item);
+                        }
 
-                    // Update Product Images
-                    ProductGalaryImage::where('product_id', $newProduct->id)->delete();
-                    foreach ($galleries as $gallery) {
-                        $gal = new ProductGalaryImage();
-                        $gal->product_id = $newProduct->id;
-                        $gal->images_source = $gallery['url'];
-                        $gal->save();
+                        // Update Product Sku
+                        $newProductSku = ProductSku::where('product_id', $newProduct->id)
+                        ->where('variation_id', $variant['id'])->first();
+                        if (!$newProductSku instanceof ProductSku) {
+                            $newProductSku = new ProductSku();
+                        }
+                        $newProductSku->product_id = $newProduct->id;
+                        $newProductSku->variation_id = $variant['id'];
+                        $newProductSku->sku = $sku;
+                        $newProductSku->track_sku = $sku;
+                        $newProductSku->purchase_price = $variant['sale_price'];
+                        $newProductSku->selling_price = $variant['sale_price'];
+                        $newProductSku->weight = 0;
+                        $newProductSku->length = 0;
+                        $newProductSku->breadth = 0;
+                        $newProductSku->height = 0;
+                        $newProductSku->status = 1;
+                        $newProductSku->save();
+                        $skuIds[] = $newProductSku->id;
+
+                        foreach ($variant['items'] as $item) {
+                            $productVariation = ProductVariations::where('product_id', $newProduct->id)
+                            ->where('product_sku_id',  $newProductSku->id)
+                            ->where('attribute_id', $item['attribute_set_id'])
+                            ->where('attribute_value_id', $item['attribute_id'])
+                            ->first();
+                            if (!$productVariation) {
+                                $productVariation = new ProductVariations();
+                                $productVariation->product_sku_id = $newProductSku->id;
+                                $productVariation->product_id = $newProduct->id;
+                                $productVariation->attribute_id = $item['attribute_set_id'];
+                                $productVariation->attribute_value_id = $item['attribute_id'];
+                                $productVariation->save();
+                            }
+                            $pVariationIds[] = $productVariation->id;
+                        }
+                    }
+                    
+                    if (!empty($skuIds)) {
+                        ProductSku::where('product_id', $newProduct->id)->whereNotIn('id', $skuIds)->delete();
+                    }
+                    if (!empty($pVariationIds)) {
+                        ProductVariations::where('product_id', $newProduct->id)->whereNotIn('id', $pVariationIds)->delete();
                     }
                 }
             }

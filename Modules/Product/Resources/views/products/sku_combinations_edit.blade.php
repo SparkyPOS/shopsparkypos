@@ -66,7 +66,7 @@
                     $wholesalePriceInfo = \Modules\WholeSale\Entities\WholesalePrice::where('product_id', @$sellerProductInfo->id)->where('sku_id', @$sellerProductSKU->id)->get();
                 }
             @endphp
-            @if(strlen($str) > 0)
+            @if(strlen($str) > 0 && (!$query_1 || ($init_load=='load' && $query_1)))
                 <tr class="variant text-center">
                     <td class="">
                         <input type="hidden" name="str_attribute_id[]" value="{{ $attribute_id }}">
