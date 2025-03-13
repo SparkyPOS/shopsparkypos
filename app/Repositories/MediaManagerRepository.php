@@ -4,6 +4,9 @@ namespace App\Repositories;
 use App\Models\MediaManager;
 use App\Traits\ImageStore;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 
 class MediaManagerRepository
 {
@@ -68,6 +71,45 @@ class MediaManagerRepository
         $data = DB::table('media_managers')->insert($file_info);
 
         return $data;
+    }
+
+    public function downloadAndSaveImage($url, $customName = null)
+    {
+        // Fetch the image content from the external URL
+        $response = Http::get($url);
+
+        // Check if the response is successful
+        if ($response->successful()) {
+            // Get the image content (binary data)
+            $imageData = $response->body();
+
+            // Get the filename (extract from the URL or use custom name)
+            $filename = $customName ?: basename($url);
+
+            // Store the image in local storage (e.g., public/uploads/)
+            $path = Storage::put("public/uploads/{$filename}", $imageData);
+            $mimeType = mime_content_type(storage_path("app/public/uploads/{$filename}"));
+
+            // Create the UploadedFile instance
+            $file = new UploadedFile(storage_path("app/public/uploads/{$filename}"), $filename, $mimeType, null, true);
+ 
+            $file_info = $this->mediaUpload($file);
+            $file_info['user_id'] = 1;
+            $file_info['external_link'] = $url;
+            $meida_id = DB::table('media_managers')->insertGetId($file_info);
+    
+            // if successfully saved the data, return get madia id
+            return [
+                'success' => true,
+                'media_id' => $meida_id
+            ];
+        }
+
+        // If fetching the image fails, return an error
+        return [
+            'success' => false,
+            'error' => 'Failed to fetch the image from URL'
+        ];
     }
 
     public function destroy($id){

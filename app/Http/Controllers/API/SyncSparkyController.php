@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\MediaManager;
+use App\Repositories\MediaManagerRepository;
 use Illuminate\Http\Request;
 use Modules\Product\Entities\Category;
 use Illuminate\Support\Str;
@@ -179,7 +181,7 @@ class SyncSparkyController extends Controller
                         'minimum_order_qty' => 1,
                         'is_physical' => 1,
                         'is_approved' => 1,
-                        'status' => $product['status'],
+                        'status' => $product['status'] == 'available' ? 1 : 0 ,
                         'video_provider' => 'youtube'
                     ]
                 );
@@ -192,15 +194,35 @@ class SyncSparkyController extends Controller
                     ]
                 );
 
+                $mediaRepository = null;
+                $mediaIds = [];
                 // Update Product Images
                 ProductGalaryImage::where('product_id', $newProduct->id)->delete();
                 foreach ($galleries as $gallery) {
-                    $gal = new ProductGalaryImage();
-                    $gal->product_id = $newProduct->id;
-                    $gal->images_source = $gallery['url'];
-                    $gal->save();
+                    $media = MediaManager::where('external_link', $gallery['url'])->first();
+                    if (!$media) {
+                        if (!$mediaRepository) {
+                            $mediaRepository = app(MediaManagerRepository::class);
+                        }
+                        $response = $mediaRepository->downloadAndSaveImage($gallery['url']);
+                        if ($response['success']) {
+                            $media = MediaManager::find($response['media_id']);
+                        }
+                    }
+                    if ($media) {
+                        $gal = new ProductGalaryImage();
+                        $gal->product_id = $newProduct->id;
+                        $gal->images_source = $media->file_name;
+                        $gal->media_id = $media->id;
+                        $gal->save();
+                        $mediaIds[] = $media->id;
+                    }
                 }
 
+                if (!empty($mediaIds)) {
+                    $newProduct->media_ids = implode($mediaIds);
+                    $newProduct->save();
+                }
                 if (!$variant_product) {
                     // Update Product Sku
                     $newProductSku = ProductSku::where('product_id', $newProduct->id)->first();
