@@ -34,7 +34,7 @@
             <div class="row m-0">
                 <div class="col-xxl-8 col-xl-9 col-md-10 mx-auto">
                     <div class="contact_address">
-                        <div class="row justify-content-end row-gap-60">
+                        <div class="row justify-content-end row-gap-60 mb-4">
                         <div class="col-lg-8">
                                 <div class="contact_form_box">
                                     <div class="contact_info">
@@ -226,7 +226,7 @@
                                     </div>
                                     <div class="d-flex gap-15 align-items-center">
                                         <div class="icon">
-                                            <i class="fas fa-map-marker-alt"></i>
+                                            <i class="fas fa-map-marker-alt" style="font-size: 29px; margin-right: 4px;"></i>
                                         </div>
                                         <div class="contact_wiz_box">
                                             <span class="contact_box_title d-block lh-1 ">{{__('amazy.Head office')}}</span>
