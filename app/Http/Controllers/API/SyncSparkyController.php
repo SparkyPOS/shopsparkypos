@@ -41,7 +41,7 @@ class SyncSparkyController extends Controller
                     $categoryModel = Category::updateOrCreate(
                         ['id' => $categoryId], // Match by ID
                         [
-                            'name' => $category['name'],
+                            'name' => html_entity_decode($category['name']),
                             'slug' => $category['product_key'] ? $category['product_key'] : Str::slug($category['name']),
                             'parent_id' => $category['parent_id'] ?? null,
                             'depth_level' => $category['parent_id'] ? 2 : 1,
