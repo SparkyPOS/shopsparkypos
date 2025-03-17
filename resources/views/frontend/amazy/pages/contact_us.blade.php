@@ -224,9 +224,9 @@
                                             <h4 class="contact_box_desc mb-0">{{ $contactContent->email }}</h4>
                                         </div>
                                     </div>
-                                    <div class="d-flex gap-15 align-items-center">
+                                    <div class="d-flex gap-10 align-items-center" style="gap: 10px;">
                                         <div class="icon">
-                                            <img src="{{url('/')}}/public/frontend/amazy/img/map-marker-alt.png" alt="Map Marker" style="width: 30px;">
+                                            <img src="{{url('/')}}/public/frontend/amazy/img/map-marker-alt.png" alt="Map Marker" style="width: 32px;">
                                         </div>
                                         <div class="contact_wiz_box">
                                             <span class="contact_box_title d-block lh-1 ">{{__('amazy.Head office')}}</span>
