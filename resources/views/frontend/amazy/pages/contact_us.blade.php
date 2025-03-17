@@ -226,6 +226,7 @@
                                     </div>
                                     <div class="d-flex gap-15 align-items-center">
                                         <div class="icon">
+                                            <img src="{{url('/')}}/public/frontend/amazy/img/map-marker-alt.png" alt="Map Marker">
                                             <i class="fas fa-map-marker-alt" style="font-size: 29px; margin-right: 4px;"></i>
                                         </div>
                                         <div class="contact_wiz_box">
